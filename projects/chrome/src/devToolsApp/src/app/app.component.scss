@@ -1,0 +1,36 @@
+.root {
+  display: grid;
+  height: 100%;
+
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(6,  auto) 1fr;
+
+  hr {
+    height: 5px;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: gray;
+
+    cursor: row-resize;
+  }
+
+  .overview {
+    border: 3px solid red;
+  }
+
+  .selector {
+    border: 3px solid blue;
+  }
+
+  .time {
+    border: 3px solid green;
+  }
+
+  .container {
+    border: 3px solid fuchsia;
+
+    height: 100%;
+  }
+}

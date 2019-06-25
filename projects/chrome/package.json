@@ -1,0 +1,26 @@
+{
+  "name": "chrome",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "webpack && ts-node build.ts && cd src/devToolsApp && ng build --prod",
+    "build:extension-files": "webpack && ts-node build.ts",
+    "watch:devToolsPage": "cd src/devToolsApp && ng build --watch"
+  },
+  "dependencies": {
+    "graphdracula": "^1.2.1",
+    "raphael": "^2.2.8",
+    "source-map": "^0.7.3",
+    "vis": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.0.86",
+    "@types/node": "^12.0.10",
+    "@types/vis": "^4.21.17",
+    "ts-loader": "^6.0.4",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.5.2",
+    "webpack": "^4.35.0",
+    "webpack-cli": "^3.3.5"
+  }
+}
