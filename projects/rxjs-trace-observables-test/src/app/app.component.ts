@@ -21,7 +21,6 @@ export class AppComponent implements OnInit {
     const second$ = interval(20).pipe(
       skip(4),
       take(2),
-      switchMap(x => first$),
     );
 
     this.obs$ = combineLatest(first$, second$)
@@ -40,22 +39,8 @@ export class AppComponent implements OnInit {
             first()
           );
         }),
-        take(2)
+        take(2),
+        trace()
       );
-
-    interval(1000).pipe(
-      take(3),
-      map(x => x ** 2),
-      trace()
-    ).subscribe();
-
-    interval(1000).pipe(
-      take(7),
-      delay(500),
-      map(x => x ** 4),
-      trace()
-    ).subscribe();
-
-    console.log({firstStack: first$["__stack__"]});
   }
 }

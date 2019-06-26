@@ -43,20 +43,8 @@ export class AppComponent implements OnInit {
   public ngOnInit(): void {
     if (window.chrome) {
 
+      this.connectToBackgroundPage();
 
-      // Create a connection to the background page
-      const backgroundPageConnection = chrome.runtime.connect({
-        name: "panel"
-      });
-
-
-      this.messages$ =
-        fromEventPattern(handler => backgroundPageConnection.onMessage.addListener(handler),
-          handler => backgroundPageConnection.onMessage.removeListener(handler)).pipe(
-          tap(console.log),
-          map(([message]) => message),
-          filter(message => isGraphMessage(message))
-        );
 
       this.graphs$ = this.messages$.pipe(
         map((message) => {
@@ -88,17 +76,6 @@ export class AppComponent implements OnInit {
         })
       );
 
-      // this.allGraphs$ = this.graphs$.pipe(
-      //   scan<GraphContent, GraphContent[]>((prev, cur) => [...prev, cur], [])
-      // );
-      //
-      // this.lastGraphs$ = this.allGraphs$.pipe(
-      //   // Gets the last graph for every graphId
-      //   map(graphs => graphs.map(x => x.graphId)
-      //     .filter((x, i, self) => self.lastIndexOf(x) === i)
-      //     .map(id => graphs.find(x => x.graphId === id)))
-      // );
-      //
       this.graphsById$ = this.graphs$.pipe(
         scan<GraphContent, { graphId: number, graphs: GraphContent[] }[]>((prev, cur) => {
           const retVal = [...prev];
@@ -116,85 +93,74 @@ export class AppComponent implements OnInit {
         }, [])
       );
 
-      //
-      // this.graphsByIdOverTime$ = this.graphs$.pipe(
-      //   scan<GraphContent, { [key: string]: { [s: string]: GraphContent } }>((prev, cur) => ({
-      //     ...prev,
-      //     [cur.graphId]: {...(prev[cur.graphId] || {}), [cur.time]: cur}
-      //   }), {})
-      // );
-
-      this.currentGraph$.subscribe(data => {
-        const network = new vis.Network(this.container.nativeElement, data.data, {
-          interaction: {
-            hover: true
-          },
-          edges: {
-            arrows: {to: {enabled: true}}
-          },
-          physics: false
-        });
-
-        network.on("click", async (event: {
-          nodes: number[],
-          edges: string[],
-          event: PointerEvent,
-          pointer: {
-            DOM: { x: number, y: number },
-            canvas: { x: number, y: number }
-          }
-        }) => {
-          const node = event.nodes[0];
-
-          const gNode = data.graph.nodes.find(x => x.id === node);
-
-          if (gNode) {
-
-            const match = gNode.data.call.match(/^\s*at\s(?:[^(]+\s)?\(?(.*):(\d+):(\d+)\)?\s*$/);
-
-            const source = match[1];
-            const lineNumber = +match[2];
-            const col = +match[3];
-
-            const response = await fetch(source + ".map");
-
-            if (response.ok) {
-              const sm = await response.json();
-
-              await SourceMapConsumer.with(sm, null, consumer => {
-
-                const original = consumer.originalPositionFor({line: lineNumber, column: col});
-
-                // Check if the found source actually exists
-                if (sm.sources.indexOf(original.source) < 0) {
-                  // if the source is a webpack source, check if it has removed leading periods (./)
-                  if (original.source && original.source.startsWith("webpack:///")) {
-                    const fixedUrl = original.source.replace("webpack:///", "webpack:///./");
-                    if (sm.sources.indexOf(fixedUrl) >= 0) {
-                      original.source = fixedUrl;
-                    }
-                  }
-                }
-
-                chrome.devtools.panels.openResource(original.source || source,
-                  (original.source ? original.line : lineNumber) - 1,
-                  () => null);
-              });
-
-            } else {
-              chrome.devtools.panels.openResource(source, lineNumber - 1, () => console.log("Opened resource"));
-            }
-          }
-        });
-      });
-
-
-      backgroundPageConnection.postMessage({
-        name: "init",
-        tabId: chrome.devtools.inspectedWindow.tabId
-      });
+      this.currentGraph$.subscribe(data => this.drawGraph(data));
     }
 
+  }
+
+
+  public drawGraph(data) {
+    const network = new vis.Network(this.container.nativeElement, data.data, {
+      interaction: {
+        hover: true
+      },
+      edges: {
+        arrows: {to: {enabled: true}}
+      },
+      physics: false
+    });
+
+    network.on("click", async (event: {
+      nodes: number[],
+      edges: string[],
+      event: PointerEvent,
+      pointer: {
+        DOM: { x: number, y: number },
+        canvas: { x: number, y: number }
+      }
+    }) => {
+      const node = event.nodes[0];
+
+      const gNode = data.graph.nodes.find(x => x.id === node);
+
+      if (gNode) {
+
+        const match = gNode.data.call.match(/^\s*at\s(?:[^(]+\s)?\(?(.*):(\d+):(\d+)\)?\s*$/);
+
+        const source = match[1];
+        const lineNumber = +match[2];
+        const col = +match[3];
+
+        const response = await fetch(source + ".map");
+
+        if (response.ok) {
+          const sm = await response.json();
+
+          await SourceMapConsumer.with(sm, null, consumer => {
+
+            const original = consumer.originalPositionFor({line: lineNumber, column: col});
+
+            // Check if the found source actually exists
+            if (sm.sources.indexOf(original.source) < 0) {
+              // if the source is a webpack source, check if it has removed leading periods (./)
+              if (original.source && original.source.startsWith("webpack:///")) {
+                const fixedUrl = original.source.replace("webpack:///", "webpack:///./");
+                if (sm.sources.indexOf(fixedUrl) >= 0) {
+                  original.source = fixedUrl;
+                }
+              }
+            }
+
+            chrome.devtools.panels.openResource(original.source || source,
+              (original.source ? original.line : lineNumber) - 1,
+              () => null);
+          });
+
+        } else {
+          chrome.devtools.panels.openResource(source, lineNumber - 1, () => console.log("Opened resource"));
+        }
+      }
+    });
   }
 
   public getLastValue(graph: Graph<StackData>): any {
@@ -205,5 +171,27 @@ export class AppComponent implements OnInit {
     console.log({lastNodeId, lastNode, graph});
 
     return lastNode.data.value;
+  }
+
+  private connectToBackgroundPage() {
+
+// Create a connection to the background page
+    const backgroundPageConnection = chrome.runtime.connect({
+      name: "panel"
+    });
+
+
+    this.messages$ =
+      fromEventPattern(handler => backgroundPageConnection.onMessage.addListener(handler),
+        handler => backgroundPageConnection.onMessage.removeListener(handler)).pipe(
+        tap(console.log),
+        map(([message]) => message),
+        filter(message => isGraphMessage(message))
+      );
+
+    backgroundPageConnection.postMessage({
+      name: "init",
+      tabId: chrome.devtools.inspectedWindow.tabId
+    });
   }
 }
