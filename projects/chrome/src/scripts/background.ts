@@ -12,21 +12,24 @@ chrome.runtime.onConnect.addListener(function (port) {
             const tabId = message.tabId;
             connections[tabId] = port;
 
+            console.debug(`Tab ${tabId} connected.`);
+
             if (tabId in pendingMessages) {
-                // make sure this event is handled before sending messages
-                setTimeout(() => {
-                    let pendingMessage;
-                    while ((pendingMessage = pendingMessages[tabId].messages.pop())) {
-                        connections[tabId].postMessage(pendingMessage);
-                    }
-                }, 0);
+                console.debug(`Sending ${pendingMessages[tabId].messages.length} pending messages`);
+                console.debug({pendingMessages: [...pendingMessages[tabId].messages]});
+
+                for (const pendingMessage of pendingMessages[tabId].messages) {
+                    connections[tabId].postMessage(pendingMessage);
+                }
+
+                delete pendingMessages[tabId];
             }
 
             return;
         }
 
         // other message handling
-        console.log(`Forwarding message from devTools to ContentScripts: ${message}`);
+        console.debug(`Forwarding message from devTools to ContentScripts: ${message}`);
 
         chrome.tabs.sendMessage(message.tabId, message);
     };
@@ -54,15 +57,17 @@ chrome.runtime.onMessage.addListener(function (message, sender) {
     if (sender.tab) {
         const tabId = sender.tab.id;
         if (tabId in connections) {
-            console.log("forwarding message to devTools");
-            console.log({message});
+            console.debug("forwarding message to devTools");
+            console.debug({message});
 
             connections[tabId].postMessage(message);
         } else {
-            console.log("Tab not found in connection list. Queued message until connection");
+            pendingMessages[tabId] = pendingMessages[tabId] || {tabId, messages: []};
+            pendingMessages[tabId].messages.push(message);
+            console.debug(`Tab ${tabId} not found in connection list. Queued message until connection`);
         }
     } else {
-        console.log("sender.tab not defined.");
+        console.error("sender.tab not defined.");
     }
     return true;
 });

@@ -1,7 +1,7 @@
 import {Component, ElementRef, OnInit, ViewChild} from "@angular/core";
 import {fromEventPattern, Observable, Subject} from "rxjs";
 import * as vis from "vis";
-import {filter, map, scan} from "rxjs/operators";
+import {filter, map, scan, tap} from "rxjs/operators";
 import {Graph, GraphMessage, GraphMessageContent, isGraphMessage, StackData} from "rxjs-trace-observables";
 import {SourceMapConsumer} from "source-map";
 
@@ -43,9 +43,17 @@ export class AppComponent implements OnInit {
   public ngOnInit(): void {
     if (window.chrome) {
 
+
+      // Create a connection to the background page
+      const backgroundPageConnection = chrome.runtime.connect({
+        name: "panel"
+      });
+
+
       this.messages$ =
-        fromEventPattern(handler => chrome.runtime.onMessage.addListener(handler),
-          handler => chrome.runtime.onMessage.removeListener(handler)).pipe(
+        fromEventPattern(handler => backgroundPageConnection.onMessage.addListener(handler),
+          handler => backgroundPageConnection.onMessage.removeListener(handler)).pipe(
+          tap(console.log),
           map(([message]) => message),
           filter(message => isGraphMessage(message))
         );
@@ -178,6 +186,12 @@ export class AppComponent implements OnInit {
             }
           }
         });
+      });
+
+
+      backgroundPageConnection.postMessage({
+        name: "init",
+        tabId: chrome.devtools.inspectedWindow.tabId
       });
     }
 

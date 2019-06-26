@@ -5,7 +5,8 @@
   "scripts": {
     "build": "webpack && ts-node build.ts && cd src/devToolsApp && ng build --prod",
     "build:extension-files": "webpack && ts-node build.ts",
-    "watch:devToolsPage": "cd src/devToolsApp && ng build --watch"
+    "watch:devToolsPage": "cd src/devToolsApp && ng build --watch",
+    "watch:extenion-files": "webpack --watch"
   },
   "dependencies": {
     "graphdracula": "^1.2.1",

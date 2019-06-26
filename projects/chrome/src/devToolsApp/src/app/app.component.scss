@@ -3,7 +3,7 @@
   height: 100%;
 
   grid-template-columns: 1fr;
-  grid-template-rows: repeat(6,  auto) 1fr;
+  grid-template-rows: repeat(6, auto) 1fr;
 
   hr {
     height: 5px;
@@ -32,5 +32,6 @@
     border: 3px solid fuchsia;
 
     height: 100%;
+    min-height: 30px;
   }
 }
