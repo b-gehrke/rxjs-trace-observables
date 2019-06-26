@@ -1,8 +1,14 @@
 import {Observable} from "rxjs";
 import {getGraphFromStack} from "./graph";
 import {tap} from "rxjs/operators";
+import {GraphMessage} from "./graphMessage";
 
+let nextId = 0;
 export const trace = () => <T>(source: Observable<T>) => {
+
+    const obsId = nextId++;
+    let counter = 0;
+
     return source.pipe(tap(x => {
         const stack = source["__stack__"];
 
@@ -20,7 +26,7 @@ ${Object.keys(graph.adjacencyList)
 
 ${graph.nodes.map(x => (`${x.data.name}: ${x.data}`)).join("\n")} 
 `);
-        const message = {type: "graph", content: graph};
+        const message: GraphMessage = {type: "graph", content: {graph, graphId: obsId, time: counter++}};
         setTimeout(() => window.postMessage(message, "*"), 0);
     }));
 };
