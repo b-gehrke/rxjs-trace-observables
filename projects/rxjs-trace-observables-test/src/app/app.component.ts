@@ -1,6 +1,6 @@
 import {Component, OnInit} from "@angular/core";
 import {combineLatest, interval, Observable, of} from "rxjs";
-import {delay, first, map, skip, switchMap, take} from "rxjs/operators";
+import {delay, first, map, mapTo, skip, switchMap, take, tap} from "rxjs/operators";
 import {trace} from "rxjs-trace-observables";
 import {HttpClient} from "@angular/common/http";
 
@@ -66,5 +66,16 @@ export class AppComponent implements OnInit {
         first())),
       trace("Http")
     ).subscribe(console.log);
+
+    of("hello").pipe(
+      delay(100),
+      map(x => x + " "),
+      tap(() => {
+        throw new Error("This is the error");
+      }),
+      map(x => x + "world"),
+      mapTo("Here comes the error"),
+      trace("Error")
+    ).subscribe();
   }
 }

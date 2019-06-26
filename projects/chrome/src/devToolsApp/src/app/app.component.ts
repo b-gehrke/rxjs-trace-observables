@@ -72,7 +72,7 @@ export class AppComponent implements OnInit {
               label: `${x.data.name} (${x.data.value})\n${x.data.call.replace(/^\s*at\s([^(]+\s)?\(?.*\)?\s*$/, "$1")}`,
               title: x.data.call.match(/at\s([^(]+)?\s?/)[1],
               // highlight last node
-              color: graph.adjacencyList[x.id].length === 0 ? "#b97dff" : null
+              color: (x.data.hasError ? "#ff0000" : (graph.adjacencyList[x.id].length === 0 ? "#b97dff" : undefined))
             } as vis.Node)));
           const edges = new vis.DataSet<vis.Edge>(Object.keys(graph.adjacencyList)
             .flatMap(from => graph.adjacencyList[from].map(to => ({from, to}))));

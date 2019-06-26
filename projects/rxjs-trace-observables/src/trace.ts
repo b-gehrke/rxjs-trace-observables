@@ -9,7 +9,10 @@ export const trace = (name?: string) => <T>(source: Observable<T>) => {
     const obsId = nextId++;
     let counter = 0;
 
-    return source.pipe(tap(x => {
+    return source.pipe(
+        tap(traceFn, traceFn));
+
+    function traceFn(x) {
         const stack = source["__stack__"];
 
         if (!stack) {
@@ -31,5 +34,5 @@ ${graph.nodes.map(x => (`${x.data.name}: ${x.data}`)).join("\n")}
         message = JSON.parse(JSON.stringify(message));
 
         setTimeout(() => window.postMessage(message, "*"), 0);
-    }));
+    }
 };

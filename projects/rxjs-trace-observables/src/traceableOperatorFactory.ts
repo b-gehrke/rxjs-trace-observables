@@ -17,6 +17,7 @@ export function traceableOperatorFactory<T extends Function>(operator: T, opName
                     operator(...args),
                     tap(val => stack.value = val),
                     catchError((err) => {
+                        stack.hasError = true;
                         // if (!(err instanceof ObservablePipeError)) {
                         // console.warn("An error occurred in an observable pipe: \n\n" + getKNode(caught['__stack__']).prettyPrint());
                         // }
