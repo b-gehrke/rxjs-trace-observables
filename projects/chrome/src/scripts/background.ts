@@ -1,6 +1,7 @@
 // background.js
 
 const connections = {};
+const pendingMessages: { tabId: number, messages: any[] }[] = [];
 
 chrome.runtime.onConnect.addListener(function (port) {
     const extensionListener = function (message, port: chrome.runtime.Port) {
@@ -8,7 +9,19 @@ chrome.runtime.onConnect.addListener(function (port) {
         // The original connection event doesn't include the tab ID of the
         // DevTools page, so we need to send it explicitly.
         if (message.name == "init") {
-            connections[message.tabId] = port;
+            const tabId = message.tabId;
+            connections[tabId] = port;
+
+            if (tabId in pendingMessages) {
+                // make sure this event is handled before sending messages
+                setTimeout(() => {
+                    let pendingMessage;
+                    while ((pendingMessage = pendingMessages[tabId].messages.pop())) {
+                        connections[tabId].postMessage(pendingMessage);
+                    }
+                }, 0);
+            }
+
             return;
         }
 
@@ -36,7 +49,7 @@ chrome.runtime.onConnect.addListener(function (port) {
 
 // Receive message from content script and relay to the devTools page for the
 // current tab
-chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(function (message, sender) {
     // Messages from content scripts should have sender.tab set
     if (sender.tab) {
         const tabId = sender.tab.id;
@@ -46,7 +59,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
             connections[tabId].postMessage(message);
         } else {
-            console.log("Tab not found in connection list.");
+            console.log("Tab not found in connection list. Queued message until connection");
         }
     } else {
         console.log("sender.tab not defined.");
