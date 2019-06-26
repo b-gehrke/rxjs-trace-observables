@@ -40,7 +40,7 @@ export class AppComponent implements OnInit {
           );
         }),
         take(2),
-        trace()
+        trace("Tracer 1")
       );
   }
 }

@@ -4,7 +4,7 @@ import {tap} from "rxjs/operators";
 import {GraphMessage} from "./graphMessage";
 
 let nextId = 0;
-export const trace = () => <T>(source: Observable<T>) => {
+export const trace = (name?: string) => <T>(source: Observable<T>) => {
 
     const obsId = nextId++;
     let counter = 0;
@@ -26,7 +26,7 @@ ${Object.keys(graph.adjacencyList)
 
 ${graph.nodes.map(x => (`${x.data.name}: ${x.data}`)).join("\n")} 
 `);
-        const message: GraphMessage = {type: "graph", content: {graph, graphId: obsId, time: counter++}};
+        const message: GraphMessage = {type: "graph", content: {graph, graphId: obsId, time: counter++, name: name || obsId.toString()}};
         setTimeout(() => window.postMessage(message, "*"), 0);
     }));
 };

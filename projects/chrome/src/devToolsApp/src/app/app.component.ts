@@ -64,7 +64,7 @@ export class AppComponent implements OnInit {
           const {graphId, graph} = message.content;
 
           console.log("Drawing graph with id " + graphId);
-          console.log({graph});
+          console.log(message);
 
           const nodes = new vis.DataSet<vis.Node>(graph.nodes.map(
             x => ({
@@ -84,7 +84,8 @@ export class AppComponent implements OnInit {
             graphId,
             time: message.content.time,
             // clone the graph to get access to the functions
-            graph: new Graph(graph)
+            graph: new Graph(graph),
+            name: message.content.name
           };
         })
       );
@@ -110,7 +111,7 @@ export class AppComponent implements OnInit {
 
       this.reset$.pipe(
         withLatestFrom(network$)
-      ).subscribe(([_, network]) => network.destroy());
+      ).subscribe(([, network]) => network.destroy());
 
       network$.subscribe();
     }
@@ -188,8 +189,6 @@ export class AppComponent implements OnInit {
     const lastNodeId = +Object.keys(graph.adjacencyList).find(key => graph.adjacencyList[+key].length === 0);
 
     const lastNode = graph.getNode(lastNodeId);
-
-    console.log({lastNodeId, lastNode, graph});
 
     return lastNode.data.value;
   }

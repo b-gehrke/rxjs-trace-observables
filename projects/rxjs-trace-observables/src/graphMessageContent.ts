@@ -22,4 +22,9 @@ export interface GraphMessageContent {
      * Allows to show the (emission) history of the traced observable
      */
     time: number;
+
+    /**
+     * Name of the traced observable
+     */
+    name: string;
 }
