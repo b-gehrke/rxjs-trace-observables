@@ -1,5 +1,6 @@
 <div class="root">
   <div #selector class="selector">
+    <button (click)="resetSource.next()">Clear</button>
     <button (click)="currentGraphsSetSource.next(graphSet.graphs)"
             *ngFor="let graphSet of graphsById$ | async">{{graphSet.graphId}}</button>
   </div>

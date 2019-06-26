@@ -1,7 +1,7 @@
 import {Component, ElementRef, OnInit, ViewChild} from "@angular/core";
-import {fromEventPattern, Observable, Subject} from "rxjs";
+import {fromEventPattern, merge, Observable, Subject} from "rxjs";
 import * as vis from "vis";
-import {filter, map, scan, tap} from "rxjs/operators";
+import {filter, map, mapTo, scan, startWith, switchMap, withLatestFrom} from "rxjs/operators";
 import {Graph, GraphMessage, GraphMessageContent, isGraphMessage, StackData} from "rxjs-trace-observables";
 import {SourceMapConsumer} from "source-map";
 
@@ -28,10 +28,12 @@ export class AppComponent implements OnInit {
 
   public graphsById$: Observable<{ graphId: number, graphs: GraphContent[] }[]>;
   public currentGraphsSetSource: Subject<GraphContent[]> = new Subject();
-  public currentGraphsSet$ = this.currentGraphsSetSource.asObservable();
+  public currentGraphsSet$: Observable<GraphContent[]> = this.currentGraphsSetSource.asObservable();
   public currentGraphSource: Subject<GraphContent> = new Subject();
-  public currentGraph$ = this.currentGraphSource.asObservable();
-  public currentValue$: Observable<any>;
+  public currentGraph$: Observable<GraphContent>;
+  public resetSource = new Subject();
+
+  private reset$: Observable<any>;
 
   constructor() {
     // @ts-ignore Initialize must be called but is not available in the node module
@@ -44,6 +46,17 @@ export class AppComponent implements OnInit {
     if (window.chrome) {
 
       this.connectToBackgroundPage();
+
+      this.reset$ = merge(
+        fromEventPattern(handler => chrome.tabs.onUpdated.addListener(handler), handler => chrome.tabs.onUpdated.removeListener(handler))
+          .pipe(
+            filter(([tabId, changeInfo]) => tabId === chrome.devtools.inspectedWindow.tabId && changeInfo.status === "complete"),
+            mapTo(true)
+          ),
+        this.resetSource);
+
+      this.currentGraph$ = merge(this.currentGraphSource, this.reset$.pipe(mapTo(null)));
+      this.currentGraphsSet$ = merge(this.currentGraphsSetSource, this.reset$.pipe(mapTo([])));
 
 
       this.graphs$ = this.messages$.pipe(
@@ -76,7 +89,7 @@ export class AppComponent implements OnInit {
         })
       );
 
-      this.graphsById$ = this.graphs$.pipe(
+      this.graphsById$ = this.reset$.pipe(switchMap(() => this.graphs$.pipe(
         scan<GraphContent, { graphId: number, graphs: GraphContent[] }[]>((prev, cur) => {
           const retVal = [...prev];
 
@@ -90,16 +103,22 @@ export class AppComponent implements OnInit {
           graphSet.graphs.push(cur);
 
           return retVal;
-        }, [])
-      );
+        }, []),
+        startWith([]))));
 
-      this.currentGraph$.subscribe(data => this.drawGraph(data));
+      const network$ = this.currentGraph$.pipe(filter(x => !!x), map(data => this.drawGraph(data)));
+
+      this.reset$.pipe(
+        withLatestFrom(network$)
+      ).subscribe(([_, network]) => network.destroy());
+
+      network$.subscribe();
     }
 
   }
 
 
-  public drawGraph(data) {
+  public drawGraph(data): vis.Network {
     const network = new vis.Network(this.container.nativeElement, data.data, {
       interaction: {
         hover: true
@@ -161,6 +180,8 @@ export class AppComponent implements OnInit {
         }
       }
     });
+
+    return network;
   }
 
   public getLastValue(graph: Graph<StackData>): any {
@@ -184,7 +205,6 @@ export class AppComponent implements OnInit {
     this.messages$ =
       fromEventPattern(handler => backgroundPageConnection.onMessage.addListener(handler),
         handler => backgroundPageConnection.onMessage.removeListener(handler)).pipe(
-        tap(console.log),
         map(([message]) => message),
         filter(message => isGraphMessage(message))
       );
