@@ -7,3 +7,4 @@ export * from "./traceObservablePipes";
 export * from "./message";
 export * from "./graphMessage";
 export * from "./graphMessageContent";
+export {TraceObservablePipesConfiguration} from "./traceObservablePipesConfiguration";

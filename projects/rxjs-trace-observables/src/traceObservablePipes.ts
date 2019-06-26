@@ -2,9 +2,11 @@ import {Observable, throwError} from "rxjs";
 import {traceableCombinationOperatorFactory} from "./traceableCombinationOperatorFactory";
 import {traceableOperatorFactory} from "./traceableOperatorFactory";
 import {StackData} from "./stackData";
+import {TraceObservablePipesConfiguration} from "./traceObservablePipesConfiguration";
 
-
-export function traceObservablePipes(rxjs_, rxjsOperators_) {
+export function traceObservablePipes(rxjs_, rxjsOperators_, config: TraceObservablePipesConfiguration = {
+    excludePackages: []
+}) {
     const origRxJsOperators = {...rxjsOperators_};
     const origRxJs = {...rxjs_};
 
@@ -21,11 +23,13 @@ export function traceObservablePipes(rxjs_, rxjsOperators_) {
 
 
     for (const opName in rxjsOperators_) {
-        const operator = rxjsOperators_[opName];
-        if (typeof operator === "function" && opName !== "switchMap") {
-            Object.defineProperty(rxjsOperators_, opName, {
-                value: traceableOperatorFactory(origRxJsOperators[opName], opName)
-            });
+        if (rxjsOperators_.hasOwnProperty(opName)) {
+            const operator = rxjsOperators_[opName];
+            if (typeof operator === "function" && opName !== "switchMap") {
+                Object.defineProperty(rxjsOperators_, opName, {
+                    value: traceableOperatorFactory(origRxJsOperators[opName], opName, config)
+                });
+            }
         }
     }
 
@@ -39,35 +43,40 @@ export function traceObservablePipes(rxjs_, rxjsOperators_) {
                 const stack = new StackData("switchMap");
 
                 return (source: Observable<any>) => {
-                    const sourceStack = [...(source["__stack__"] || []), stack];
-                    source["__stack__"] = sourceStack;
+                    source["__stack__"] = (source["__stack__"] || []);
+                    if (config.excludePackages.some(x => stack.call.indexOf(x) >= 0)) {
+                        return source;
+                    } else {
+                        const sourceStack = [...(source["__stack__"] || []), stack];
+                        source["__stack__"] = sourceStack;
 
-                    let nestedStackStart = sourceStack.length;
-                    let nestedStackLength = 0;
-
-
-                    const origProject = project;
-                    project = (value: any, index: number) => {
-                        const newObs = origProject(value, index);
-
-                        source["__stack__"].splice(nestedStackStart, nestedStackLength, ...(newObs["__stack__"] || []));
-                        nestedStackLength = (newObs["__stack__"] && newObs["__stack__"].length) || 0;
-
-                        return newObs;
-                    };
-
-                    return source.pipe(
-                        origRxJsOperators.switchMap(project, resultSelector),
-                        origRxJsOperators.catchError((err, caught) => {
-                            // if (!(err instanceof ObservablePipeError)) {
-                            // console.warn("An error occurred in an observable pipe: \n\n" + getKNode(caught['__stack__']).prettyPrint());
+                        let nestedStackStart = sourceStack.length;
+                        let nestedStackLength = 0;
 
 
-                            // }
+                        const origProject = project;
+                        project = (value: any, index: number) => {
+                            const newObs = origProject(value, index);
 
-                            return throwError(err);
-                        })
-                    );
+                            source["__stack__"].splice(nestedStackStart, nestedStackLength, ...(newObs["__stack__"] || []));
+                            nestedStackLength = (newObs["__stack__"] && newObs["__stack__"].length) || 0;
+
+                            return newObs;
+                        };
+
+                        return source.pipe(
+                            origRxJsOperators.switchMap(project, resultSelector),
+                            origRxJsOperators.catchError((err) => {
+                                // if (!(err instanceof ObservablePipeError)) {
+                                // console.warn("An error occurred in an observable pipe: \n\n" + getKNode(caught['__stack__']).prettyPrint());
+
+
+                                // }
+
+                                return throwError(err);
+                            })
+                        );
+                    }
                 };
             }
     });
@@ -76,7 +85,7 @@ export function traceObservablePipes(rxjs_, rxjsOperators_) {
         const operator = rxjs_[opName];
         if (typeof operator === "function") {
             Object.defineProperty(rxjs_, opName, {
-                value: traceableCombinationOperatorFactory(origRxJs[opName], opName)
+                value: traceableCombinationOperatorFactory(origRxJs[opName], opName, config)
             });
         }
     }

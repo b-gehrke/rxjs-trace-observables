@@ -26,7 +26,10 @@ ${Object.keys(graph.adjacencyList)
 
 ${graph.nodes.map(x => (`${x.data.name}: ${x.data}`)).join("\n")} 
 `);
-        const message: GraphMessage = {type: "graph", content: {graph, graphId: obsId, time: counter++, name: name || obsId.toString()}};
+        let message: GraphMessage = {type: "graph", content: {graph, graphId: obsId, time: counter++, name: name || obsId.toString()}};
+
+        message = JSON.parse(JSON.stringify(message));
+
         setTimeout(() => window.postMessage(message, "*"), 0);
     }));
 };

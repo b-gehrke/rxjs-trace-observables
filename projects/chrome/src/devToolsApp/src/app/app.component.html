@@ -2,7 +2,8 @@
   <div #selector class="selector">
     <button (click)="resetSource.next()">Clear</button>
     <button (click)="currentGraphsSetSource.next(graphSet.graphs)"
-            *ngFor="let graphSet of graphsById$ | async">{{graphSet.graphs[0].name}}</button>
+            *ngFor="let graphSet of graphsById$ | async">{{graphSet.graphs[0].name}} ({{graphSet.graphs.length}})
+    </button>
   </div>
   <hr [target]="selector" appResizeable/>
   <div #time class="time">

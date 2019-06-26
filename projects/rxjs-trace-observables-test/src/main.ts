@@ -12,7 +12,7 @@ if (environment.production) {
   enableProdMode();
 }
 
-traceObservablePipes(rxjs, rxjsOperators);
+traceObservablePipes(rxjs, rxjsOperators, {excludePackages: ["vendor.js"]});
 
 
 platformBrowserDynamic().bootstrapModule(AppModule)

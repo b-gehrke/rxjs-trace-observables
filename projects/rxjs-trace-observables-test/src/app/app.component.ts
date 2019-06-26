@@ -2,6 +2,7 @@ import {Component, OnInit} from "@angular/core";
 import {combineLatest, interval, Observable, of} from "rxjs";
 import {delay, first, map, skip, switchMap, take} from "rxjs/operators";
 import {trace} from "rxjs-trace-observables";
+import {HttpClient} from "@angular/common/http";
 
 @Component({
   selector: "app-root",
@@ -12,6 +13,9 @@ export class AppComponent implements OnInit {
   title = "rxjs-trace-observables-test";
 
   public obs$: Observable<any>;
+
+  constructor(private http: HttpClient) {
+  }
 
   public ngOnInit() {
     const first$ = interval(20).pipe(
@@ -39,8 +43,28 @@ export class AppComponent implements OnInit {
             first()
           );
         }),
-        take(2),
-        trace("Tracer 1")
+        take(2)
       );
+
+    interval(1000).pipe(
+      take(3),
+      map(x => x ** 2),
+      trace("First")
+    ).subscribe();
+
+    interval(1000).pipe(
+      take(7),
+      delay(500),
+      map(x => x ** 4),
+      trace("Second")
+    ).subscribe();
+
+    of("favicon.ico").pipe(
+      delay(100),
+      map(x => "http://localhost:4200/" + x),
+      switchMap(url => this.http.get(url, {responseType: "blob"}).pipe(
+        first())),
+      trace("Http")
+    ).subscribe(console.log);
   }
 }

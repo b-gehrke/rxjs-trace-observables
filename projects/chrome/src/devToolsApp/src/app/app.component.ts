@@ -1,7 +1,7 @@
-import {Component, ElementRef, OnInit, ViewChild} from "@angular/core";
+import {ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild} from "@angular/core";
 import {fromEventPattern, merge, Observable, Subject} from "rxjs";
 import * as vis from "vis";
-import {filter, map, mapTo, scan, startWith, switchMap, withLatestFrom} from "rxjs/operators";
+import {filter, map, mapTo, scan, share, startWith, switchMap, tap, withLatestFrom} from "rxjs/operators";
 import {Graph, GraphMessage, GraphMessageContent, isGraphMessage, StackData} from "rxjs-trace-observables";
 import {SourceMapConsumer} from "source-map";
 
@@ -35,7 +35,7 @@ export class AppComponent implements OnInit {
 
   private reset$: Observable<any>;
 
-  constructor() {
+  constructor(private _cdr: ChangeDetectorRef) {
     // @ts-ignore Initialize must be called but is not available in the node module
     SourceMapConsumer.initialize({
       "lib/mappings.wasm": "https://unpkg.com/source-map@0.7.3/lib/mappings.wasm"
@@ -51,9 +51,9 @@ export class AppComponent implements OnInit {
         fromEventPattern(handler => chrome.tabs.onUpdated.addListener(handler), handler => chrome.tabs.onUpdated.removeListener(handler))
           .pipe(
             filter(([tabId, changeInfo]) => tabId === chrome.devtools.inspectedWindow.tabId && changeInfo.status === "complete"),
-            mapTo(true)
+            mapTo(null)
           ),
-        this.resetSource);
+        this.resetSource).pipe(startWith(null));
 
       this.currentGraph$ = merge(this.currentGraphSource, this.reset$.pipe(mapTo(null)));
       this.currentGraphsSet$ = merge(this.currentGraphsSetSource, this.reset$.pipe(mapTo([])));
@@ -89,25 +89,28 @@ export class AppComponent implements OnInit {
             graph: new Graph(graph),
             name: message.content.name
           };
-        })
+        }),
+        tap(() => setTimeout(() => this._cdr.detectChanges(), 0)),
       );
 
-      this.graphsById$ = this.reset$.pipe(switchMap(() => this.graphs$.pipe(
-        scan<GraphContent, { graphId: number, graphs: GraphContent[] }[]>((prev, cur) => {
-          const retVal = [...prev];
 
-          let graphSet = prev.find(x => x.graphId === cur.graphId);
+      this.graphsById$ = this.reset$.pipe(
+        switchMap(() => this.graphs$.pipe(
+          scan<GraphContent, { graphId: number, graphs: GraphContent[] }[]>((prev, cur) => {
+            const retVal = [...prev];
 
-          if (!graphSet) {
-            graphSet = {graphId: cur.graphId, graphs: []};
-            retVal.push(graphSet);
-          }
+            let graphSet = prev.find(x => x.graphId === cur.graphId);
 
-          graphSet.graphs.push(cur);
+            if (!graphSet) {
+              graphSet = {graphId: cur.graphId, graphs: []};
+              retVal.push(graphSet);
+            }
 
-          return retVal;
-        }, []),
-        startWith([]))));
+            graphSet.graphs.push(cur);
+
+            return retVal;
+          }, []),
+          startWith([]))));
 
       const network$ = this.currentGraph$.pipe(filter(x => !!x), map(data => this.drawGraph(data)));
 
@@ -195,24 +198,26 @@ export class AppComponent implements OnInit {
     return lastNode.data.value;
   }
 
-  private connectToBackgroundPage() {
+  private connectToBackgroundPage(): chrome.runtime.Port {
 
 // Create a connection to the background page
     const backgroundPageConnection = chrome.runtime.connect({
       name: "panel"
     });
 
-
     this.messages$ =
       fromEventPattern(handler => backgroundPageConnection.onMessage.addListener(handler),
         handler => backgroundPageConnection.onMessage.removeListener(handler)).pipe(
         map(([message]) => message),
-        filter(message => isGraphMessage(message))
+        filter(message => isGraphMessage(message)),
+        share()
       );
 
     backgroundPageConnection.postMessage({
       name: "init",
       tabId: chrome.devtools.inspectedWindow.tabId
     });
+
+    return backgroundPageConnection;
   }
 }

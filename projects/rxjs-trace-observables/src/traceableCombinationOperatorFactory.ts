@@ -1,8 +1,11 @@
 import {Observable} from "rxjs";
 import {StackData} from "./stackData";
 import {tap} from "rxjs/operators";
+import {TraceObservablePipesConfiguration} from "./traceObservablePipesConfiguration";
 
-export function traceableCombinationOperatorFactory<T extends Function>(operator: T, opName: string) {
+export function traceableCombinationOperatorFactory<T extends Function>(operator: T,
+                                                                        opName: string,
+                                                                        config: TraceObservablePipesConfiguration) {
     // @ts-ignore
     return (...args: Observable[]) => {
         if (args.length === 1 && Array.isArray(args[0])) {
@@ -12,8 +15,12 @@ export function traceableCombinationOperatorFactory<T extends Function>(operator
         const stack = new StackData(opName);
         result["__stack__"] = [
             args.filter(x => x["__stack__"]).map(arg => arg["__stack__"]),
-            stack
         ];
+
+        if (!config.excludePackages.some(x => stack.call.indexOf(x) >= 0)) {
+            result["__stack__"] = [...result["__stack__"], stack];
+        }
+
         return result.pipe(tap(val => stack.value = val));
     };
 }
