@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "scripts": {
     "test": "mocha --reporter spec --require ts-node/register src/**/*.spec.ts",
-    "build": "webpack && cp package.json dist/package.json"
+    "build": "webpack && cp package.json dist/package.json",
+    "build:watch": "cp package.json dist/package.json && webpack --watch"
   },
   "dependencies": {
     "rxjs": "^6.5.2"

@@ -1,17 +1,21 @@
 <div class="root">
-  <div #overview class="overview">
-    This is the overview
-  </div>
-  <hr [target]="overview" appResizeable/>
   <div #selector class="selector">
-    This is the selector
+    <button (click)="currentGraphsSetSource.next(graphSet.graphs)"
+            *ngFor="let graphSet of graphsById$ | async">{{graphSet.graphId}}</button>
   </div>
   <hr [target]="selector" appResizeable/>
   <div #time class="time">
-    This is the time switcher
+
+    <button (click)="currentGraphSource.next(graph)"
+            *ngFor="let graph of currentGraphsSet$ | async">{{graph.time}}</button>
   </div>
   <hr [target]="time" appResizeable/>
-  <div class="container">
-    Here you can see the graph
+  <ng-container *ngIf="currentGraph$ | async as currentGraph">
+    <div #overview class="overview">
+      {{ {lastValue: getLastValue(currentGraph.graph)} | json }}
+    </div>
+    <hr [target]="overview" appResizeable/>
+  </ng-container>
+  <div #container class="container">
   </div>
 </div>

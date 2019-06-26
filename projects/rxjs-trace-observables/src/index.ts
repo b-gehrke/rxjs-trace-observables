@@ -4,3 +4,6 @@ export * from "./node";
 export * from "./stackData";
 export * from "./trace";
 export * from "./traceObservablePipes";
+export * from "./message";
+export * from "./graphMessage";
+export * from "./graphMessageContent";

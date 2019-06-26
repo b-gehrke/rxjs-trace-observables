@@ -2,7 +2,7 @@ chrome.devtools.panels.create("Trace Observables",
     null,
     "devToolsApp/index.html",
 
-    function (panel) {
+    function () {
 
 
         // Create a connection to the background page
@@ -14,13 +14,5 @@ chrome.devtools.panels.create("Trace Observables",
             name: "init",
             tabId: chrome.devtools.inspectedWindow.tabId
         });
-
-        backgroundPageConnection.onMessage.addListener(message => {
-            if (message.type === "traceGraph") {
-                document.write(JSON.stringify(message.content));
-            }
-        });
     }
 );
-
-document.write("TEST");

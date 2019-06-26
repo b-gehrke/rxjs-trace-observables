@@ -4,9 +4,20 @@ import {Node} from "./node";
 export class Graph<T extends Hashable> {
     public readonly nodes: Node<T>[] = [];
     public readonly adjacencyList: { [k: number]: number[] } = {};
+    public readonly directed: boolean = true;
 
-    public constructor(public readonly directed: boolean = true) {
-
+    public constructor(directed?: boolean);
+    public constructor(clone?: Graph<T>);
+    public constructor(directedOrClone?: boolean | Graph<T>) {
+        if (directedOrClone !== undefined) {
+            if (typeof directedOrClone === "boolean") {
+                this.directed = directedOrClone;
+            } else {
+                this.directed = directedOrClone.directed;
+                this.adjacencyList = directedOrClone.adjacencyList;
+                this.nodes = directedOrClone.nodes;
+            }
+        }
     }
 
     public getNode(id: number | T): Node<T> | null {
@@ -25,6 +36,8 @@ export class Graph<T extends Hashable> {
         }
 
         const node = new Node<T>(data);
+
+        this.adjacencyList[node.id] = [];
 
         this.nodes.push(node);
         return node;

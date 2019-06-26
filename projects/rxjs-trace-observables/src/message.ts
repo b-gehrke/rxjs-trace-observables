@@ -12,3 +12,7 @@ export interface Message<T> {
      */
     content: T
 }
+
+export function isMessage(message: any): message is Message<any> {
+    return message && message.hasOwnProperty("type") && message.hasOwnProperty("content");
+}

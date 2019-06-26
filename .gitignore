@@ -2,6 +2,9 @@
 
 # compiled output
 dist
+src/**/.js
+src/**/.js.map
+src/**/.d.ts
 /tmp
 /out-tsc
 # Only exists if Bazel was run

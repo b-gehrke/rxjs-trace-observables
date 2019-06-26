@@ -1,6 +1,6 @@
 const port = chrome.runtime.connect();
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message) => {
     console.log(`Message to ContentPage: ${message}`);
 });
 
@@ -9,9 +9,6 @@ window.addEventListener("message", message => {
     console.log({message});
 
     if (message.data.type && message.data.type === "graph") {
-        chrome.runtime.sendMessage({
-            type: "traceGraph",
-            content: message.data.content
-        });
+        chrome.runtime.sendMessage(message.data);
     }
 });

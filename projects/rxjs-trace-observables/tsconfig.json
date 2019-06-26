@@ -8,6 +8,7 @@
       "esnext",
       "dom"
     ],
+    "outDir": "dist/ts",
     "declaration": true,
     "declarationDir": "dist",
     "inlineSourceMap": true

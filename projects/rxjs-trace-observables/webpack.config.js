@@ -1,5 +1,6 @@
 const nodeExternals = require('webpack-node-externals');
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = {
     entry: {
@@ -14,6 +15,13 @@ module.exports = {
         umdNamedDefine: true
 
     },
+    watchOptions: {
+        aggregateTimeout: 300,
+        ignored: ["node_modules", "dist"]
+    },
+    plugins: [
+        new webpack.WatchIgnorePlugin([/.*\.(js|d\.ts)/]),
+    ],
     module: {
         rules: [
             {
@@ -24,7 +32,7 @@ module.exports = {
         ]
     },
     resolve: {
-        extensions: ['.tsx', '.ts', '.js']
+        extensions: ['.ts']
     },
     externals: [nodeExternals()]
 };
