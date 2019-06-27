@@ -1,5 +1,5 @@
 import {Component, ElementRef, NgZone, OnInit, ViewChild} from "@angular/core";
-import {merge, Observable, Subject} from "rxjs";
+import {combineLatest, merge, Observable, Subject} from "rxjs";
 import * as vis from "vis";
 import {filter, map, mapTo, scan, share, shareReplay, startWith, switchMap, tap, withLatestFrom} from "rxjs/operators";
 import {Graph, GraphMessage, GraphMessageContent, isGraphMessage, StackData} from "rxjs-trace-observables";
@@ -11,6 +11,8 @@ interface GraphContent extends GraphMessageContent {
    */
   data: vis.Data;
 }
+
+const seed = 42;
 
 @Component({
   selector: "app-root",
@@ -26,14 +28,25 @@ export class AppComponent implements OnInit {
   public messages$: Observable<GraphMessage>;
   public graphs$: Observable<GraphContent>;
 
-  public graphsById$: Observable<{ graphId: number, graphs: GraphContent[] }[]>;
+  public graphsById$: Observable<{ traceId: number, graphs: GraphContent[] }[]>;
   public currentGraphsSetSource: Subject<GraphContent[]> = new Subject();
   public currentGraphsSet$: Observable<GraphContent[]>;
 
   public currentGraphSource: Subject<GraphContent> = new Subject();
   public currentGraph$: Observable<GraphContent>;
   public resetSource = new Subject();
-
+  public networkSettingsSource = new Subject<vis.Options>();
+  public networkSettings$ = this.networkSettingsSource.asObservable().pipe(startWith({
+    interaction: {
+      hover: true
+    },
+    edges: {
+      arrows: {to: {enabled: true}}
+    },
+    layout: {
+      randomSeed: seed
+    }
+  }));
   private reset$: Observable<any>;
 
   constructor(private _zone: NgZone) {
@@ -65,13 +78,13 @@ export class AppComponent implements OnInit {
 
       this.graphs$ = this.messages$.pipe(
         map((message) => {
-          let {graphId, graph} = message.content;
+          let {traceId, graph} = message.content;
           graph = new Graph(graph);
 
-          console.log("Drawing graph with id " + graphId);
+          console.log("Drawing graph with id " + traceId);
           console.log(message);
 
-          const nodes = new vis.DataSet<vis.Node>(graph.nodes.map(
+          const nodes = new vis.DataSet<vis.Node>(graph.nodes.filter(n => n.data.traceIds.indexOf(traceId) >= 0).map(
             x => ({
               id: x.id,
               label: `${x.data.name} (${x.data.value})\n${x.data.call.replace(/^\s*at\s([^(]+\s)?\(?.*\)?\s*$/, "$1")}`,
@@ -90,7 +103,7 @@ export class AppComponent implements OnInit {
               edges
 
             },
-            graphId,
+            traceId: traceId,
             time: message.content.time,
             // clone the graph to get access to the functions
             graph: new Graph(graph),
@@ -103,13 +116,13 @@ export class AppComponent implements OnInit {
       this.graphsById$ = this.reset$.pipe(
         startWith(null),
         switchMap(() => this.graphs$.pipe(
-          scan<GraphContent, { graphId: number, graphs: GraphContent[] }[]>((prev, cur) => {
+          scan<GraphContent, { traceId: number, graphs: GraphContent[] }[]>((prev, cur) => {
             const retVal = [...prev];
 
-            let graphSet = prev.find(x => x.graphId === cur.graphId);
+            let graphSet = prev.find(x => x.traceId === cur.traceId);
 
             if (!graphSet) {
-              graphSet = {graphId: cur.graphId, graphs: []};
+              graphSet = {traceId: cur.traceId, graphs: []};
               retVal.push(graphSet);
             }
 
@@ -119,28 +132,27 @@ export class AppComponent implements OnInit {
           }, []),
           startWith([]))));
 
-      const network$ = this.currentGraph$.pipe(filter(x => !!x), map(data => this.drawGraph(data)));
+      const network$ = this.currentGraph$.pipe(
+        filter(x => !!x),
+        withLatestFrom(this.networkSettings$),
+        map(([data, settings]) => this.drawGraph(data, settings)));
 
       this.reset$.pipe(
         withLatestFrom(network$)
       ).subscribe(([, network]) => network.destroy());
 
-      network$.subscribe();
+      combineLatest(network$, this.networkSettings$.pipe(startWith({}),
+        scan((prev, cur) => ({...prev, ...cur}), {})))
+        .subscribe(([network, settings]) => {
+          network.setOptions(settings);
+        });
     }
 
   }
 
 
-  public drawGraph(data): vis.Network {
-    const network = new vis.Network(this.container.nativeElement, data.data, {
-      interaction: {
-        hover: true
-      },
-      edges: {
-        arrows: {to: {enabled: true}}
-      },
-
-    });
+  public drawGraph(data: GraphContent, settings: vis.Options): vis.Network {
+    const network = new vis.Network(this.container.nativeElement, data.data, settings);
 
     network.on("click", async (event: {
       nodes: number[],
@@ -209,7 +221,7 @@ export class AppComponent implements OnInit {
     return lastNode.data.value;
   }
 
-  public selectGraphSet(graphSet: { graphId: number; graphs: GraphContent[] }) {
+  public selectGraphSet(graphSet: { traceId: number; graphs: GraphContent[] }) {
     console.log({graphSet});
 
     this.currentGraphSource.next(graphSet.graphs[graphSet.graphs.length - 1]);

@@ -4,7 +4,11 @@ import {Hashable} from "./hashable";
 export class StackData implements Hashable {
     public readonly call: string;
 
-    public constructor(public readonly name: string, public value: any = undefined, public hasError = false, public isRoot = false) {
+    public constructor(public readonly name: string,
+                       public value: any = undefined,
+                       public hasError = false,
+                       public isRoot = false,
+                       public readonly traceIds: number[] = []) {
         this.call = new Error().stack.split("\n")[3];
     }
 

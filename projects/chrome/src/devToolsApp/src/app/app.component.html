@@ -1,10 +1,32 @@
 <div class="root">
+  <div class="settings">
+    <label>
+      <select>
+        <option>
+
+        </option>
+      </select>
+    </label>
+
+    <label>
+      Use physics
+      <input #usePhysics (change)="this.networkSettingsSource.next({physics: {enabled: usePhysics.checked}})"
+             type="checkbox">
+    </label>
+
+    <label>
+      Use hierarchical
+      <input #useHierarchical
+             (change)="this.networkSettingsSource.next({layout: {hierarchical: {enabled: useHierarchical.checked, sortMethod: 'directed'}}})"
+             type="checkbox">
+    </label>
+  </div>
   <div #selector class="selector">
     <button (click)="resetSource.next()">Clear</button>
     <button
       (click)="selectGraphSet(graphSet)"
       *ngFor="let graphSet of graphsById$ | async"
-      [class.active]="((currentGraphsSet$ | async) || [])[0]?.graphId === graphSet.graphId">{{graphSet.graphs[0].name}}
+      [class.active]="((currentGraphsSet$ | async) || [])[0]?.traceId === graphSet.traceId">{{graphSet.graphs[0].name}}
       ({{graphSet.graphs.length}})
     </button>
   </div>

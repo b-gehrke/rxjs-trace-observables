@@ -15,7 +15,7 @@ export interface GraphMessageContent {
      * Id of the graph. Unique for every traced observable.
      * Allows to differentiate between observables and plot multiple observables.
      */
-    graphId: number;
+    traceId: number;
 
     /**
      * Time of the current emission.

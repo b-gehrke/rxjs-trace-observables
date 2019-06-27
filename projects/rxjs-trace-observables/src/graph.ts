@@ -117,11 +117,11 @@ export class Graph<T extends Hashable> {
      *
      */
     public depthSearch(start: Node<T>, predicate: (node: Node<T>) => boolean, options?: {
-        inverse: boolean,
-        followMatchingPaths: boolean
+        followMatchingPaths?: boolean,
+        direction?: "standard" | "inverse" | "both"
     }): Node<T>[] {
         options = {
-            inverse: false,
+            direction: "standard",
             followMatchingPaths: true,
 
             ...options
@@ -143,8 +143,17 @@ export class Graph<T extends Hashable> {
                 }
             }
 
-            const nextNodes = (options.inverse ? this.ingoing(current) : this.outgoing(current));
-            open.push(...nextNodes.filter(x => marked.indexOf(x.id) < 0));
+            let nextNodes: Node<T>[];
+
+            if (options.direction === "standard") {
+                nextNodes = this.outgoing(current);
+            } else if (options.direction === "inverse") {
+                nextNodes = this.ingoing(current);
+            } else {
+                nextNodes = [...this.outgoing(current), ...this.ingoing(current)];
+            }
+
+            open.push(...nextNodes.filter((v, i, self) => self.indexOf(v) === i).filter(x => marked.indexOf(x.id) < 0));
         }
 
         return results;

@@ -34,7 +34,10 @@ export function traceableOperatorFactory<T extends Function>(operator: T, opName
                             const lastNode = ret["__node__"] as Node<StackData>;
                             if (lastNode) {
                                 for (let outgoingElement of outgoing) {
-                                    if (!graph.breadthSearch(outgoingElement, node => node.id === lastNode.id, true)) {
+                                    if (!graph.breadthSearch(outgoingElement, node => node.id === lastNode.id, {
+                                        inverse: true,
+                                        followMatchingPaths: true
+                                    })) {
                                         console.log(`removing edge from ${ownNode.data.name} to ${outgoingElement.data.name}`);
                                         graph.removeEdge(ownNode, outgoingElement);
                                         console.log(`adding edge from ${lastNode.data.name} to ${outgoingElement.data.name} while on ${ownNode.data.name}`);
@@ -44,7 +47,10 @@ export function traceableOperatorFactory<T extends Function>(operator: T, opName
                             }
 
                             // find the first nodes(s) and add an edge from own node to those
-                            const firstNodes = graph.breadthSearch(lastNode, node => node.data.isRoot, true);
+                            const firstNodes = graph.breadthSearch(lastNode, node => node.data.isRoot, {
+                                inverse: true,
+                                followMatchingPaths: true
+                            });
 
                             // for (let firstNode of firstNodes) {
                             if (firstNodes[0]) {
