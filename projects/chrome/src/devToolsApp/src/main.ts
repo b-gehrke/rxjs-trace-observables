@@ -1,8 +1,14 @@
-import { enableProdMode } from '@angular/core';
-import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
+import {enableProdMode} from "@angular/core";
+import {platformBrowserDynamic} from "@angular/platform-browser-dynamic";
 
-import { AppModule } from './app/app.module';
-import { environment } from './environments/environment';
+import {AppModule} from "./app/app.module";
+import {environment} from "./environments/environment";
+import {traceObservablePipes} from "rxjs-trace-observables";
+
+import * as rxjs from "rxjs";
+import * as rxjsOperators from "rxjs/operators";
+
+traceObservablePipes(rxjs, rxjsOperators);
 
 if (environment.production) {
   enableProdMode();

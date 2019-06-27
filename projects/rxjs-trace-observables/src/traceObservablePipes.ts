@@ -4,11 +4,15 @@ import {traceableOperatorFactory} from "./traceableOperatorFactory";
 import {StackData} from "./stackData";
 import {TraceObservablePipesConfiguration} from "./traceObservablePipesConfiguration";
 
-export function traceObservablePipes(rxjs_, rxjsOperators_, config: TraceObservablePipesConfiguration = {
-    excludePackages: []
-}) {
+export function traceObservablePipes(rxjs_: typeof import("rxjs"),
+                                     rxjsOperators_: typeof import("rxjs/operators"),
+                                     config: TraceObservablePipesConfiguration = {
+                                         excludePackages: []
+                                     }) {
     const origRxJsOperators = {...rxjsOperators_};
     const origRxJs = {...rxjs_};
+
+    config.origRxJsOperators = origRxJsOperators;
 
     const orig = origRxJs.Observable.prototype.lift;
     rxjs_.Observable.prototype.lift = function (operator) {
@@ -81,7 +85,7 @@ export function traceObservablePipes(rxjs_, rxjsOperators_, config: TraceObserva
             }
     });
 
-    for (const opName of ["zip", "combineLatest", "forkJoin"]) {
+    for (const opName of ["zip", "combineLatest", "forkJoin", "merge", "concat"]) {
         const operator = rxjs_[opName];
         if (typeof operator === "function") {
             Object.defineProperty(rxjs_, opName, {

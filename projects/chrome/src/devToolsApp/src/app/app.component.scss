@@ -16,6 +16,11 @@
     cursor: row-resize;
   }
 
+  button.active {
+    border-color: red;
+    border-style: solid;
+  }
+
   .overview {
     border: 3px solid red;
   }

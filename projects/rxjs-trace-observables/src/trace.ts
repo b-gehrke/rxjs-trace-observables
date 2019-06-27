@@ -31,7 +31,21 @@ ${graph.nodes.map(x => (`${x.data.name}: ${x.data}`)).join("\n")}
 `);
         let message: GraphMessage = {type: "graph", content: {graph, graphId: obsId, time: counter++, name: name || obsId.toString()}};
 
-        message = JSON.parse(JSON.stringify(message));
+
+        const getCircularReplacer = () => {
+            const seen = new WeakSet();
+            return (key, value) => {
+                if (typeof value === "object" && value !== null) {
+                    if (seen.has(value)) {
+                        return;
+                    }
+                    seen.add(value);
+                }
+                return value;
+            };
+        };
+
+        message = JSON.parse(JSON.stringify(message, getCircularReplacer()));
 
         setTimeout(() => window.postMessage(message, "*"), 0);
     }

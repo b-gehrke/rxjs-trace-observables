@@ -1,7 +1,7 @@
-import {ChangeDetectorRef, Component, ElementRef, OnInit, ViewChild} from "@angular/core";
-import {fromEventPattern, merge, Observable, Subject} from "rxjs";
+import {Component, ElementRef, NgZone, OnInit, ViewChild} from "@angular/core";
+import {merge, Observable, Subject} from "rxjs";
 import * as vis from "vis";
-import {filter, map, mapTo, scan, share, startWith, switchMap, tap, withLatestFrom} from "rxjs/operators";
+import {filter, map, mapTo, scan, share, shareReplay, startWith, switchMap, tap, withLatestFrom} from "rxjs/operators";
 import {Graph, GraphMessage, GraphMessageContent, isGraphMessage, StackData} from "rxjs-trace-observables";
 import {SourceMapConsumer} from "source-map";
 
@@ -28,14 +28,15 @@ export class AppComponent implements OnInit {
 
   public graphsById$: Observable<{ graphId: number, graphs: GraphContent[] }[]>;
   public currentGraphsSetSource: Subject<GraphContent[]> = new Subject();
-  public currentGraphsSet$: Observable<GraphContent[]> = this.currentGraphsSetSource.asObservable();
+  public currentGraphsSet$: Observable<GraphContent[]>;
+
   public currentGraphSource: Subject<GraphContent> = new Subject();
   public currentGraph$: Observable<GraphContent>;
   public resetSource = new Subject();
 
   private reset$: Observable<any>;
 
-  constructor(private _cdr: ChangeDetectorRef) {
+  constructor(private _zone: NgZone) {
     // @ts-ignore Initialize must be called but is not available in the node module
     SourceMapConsumer.initialize({
       "lib/mappings.wasm": "https://unpkg.com/source-map@0.7.3/lib/mappings.wasm"
@@ -48,15 +49,18 @@ export class AppComponent implements OnInit {
       this.connectToBackgroundPage();
 
       this.reset$ = merge(
-        fromEventPattern(handler => chrome.tabs.onUpdated.addListener(handler), handler => chrome.tabs.onUpdated.removeListener(handler))
+        fromEventPatternWithinAngular(this._zone, chrome.tabs.onUpdated)
           .pipe(
             filter(([tabId, changeInfo]) => tabId === chrome.devtools.inspectedWindow.tabId && changeInfo.status === "complete"),
             mapTo(null)
           ),
-        this.resetSource).pipe(startWith(null));
+        this.resetSource).pipe();
 
-      this.currentGraph$ = merge(this.currentGraphSource, this.reset$.pipe(mapTo(null)));
-      this.currentGraphsSet$ = merge(this.currentGraphsSetSource, this.reset$.pipe(mapTo([])));
+      this.currentGraph$ = merge(
+        this.currentGraphSource,
+        this.reset$).pipe(shareReplay(1), tap(a => console.log({a})));
+
+      this.currentGraphsSet$ = merge(this.currentGraphsSetSource.asObservable(), this.reset$.pipe(mapTo([])));
 
 
       this.graphs$ = this.messages$.pipe(
@@ -90,11 +94,11 @@ export class AppComponent implements OnInit {
             name: message.content.name
           };
         }),
-        tap(() => setTimeout(() => this._cdr.detectChanges(), 0)),
       );
 
 
       this.graphsById$ = this.reset$.pipe(
+        startWith(null),
         switchMap(() => this.graphs$.pipe(
           scan<GraphContent, { graphId: number, graphs: GraphContent[] }[]>((prev, cur) => {
             const retVal = [...prev];
@@ -191,11 +195,22 @@ export class AppComponent implements OnInit {
   }
 
   public getLastValue(graph: Graph<StackData>): any {
+    if (!graph) {
+      return;
+    }
+
     const lastNodeId = +Object.keys(graph.adjacencyList).find(key => graph.adjacencyList[+key].length === 0);
 
     const lastNode = graph.getNode(lastNodeId);
 
     return lastNode.data.value;
+  }
+
+  public selectGraphSet(graphSet: { graphId: number; graphs: GraphContent[] }) {
+    console.log({graphSet});
+
+    this.currentGraphSource.next(graphSet.graphs[graphSet.graphs.length - 1]);
+    this.currentGraphsSetSource.next(graphSet.graphs);
   }
 
   private connectToBackgroundPage(): chrome.runtime.Port {
@@ -206,8 +221,7 @@ export class AppComponent implements OnInit {
     });
 
     this.messages$ =
-      fromEventPattern(handler => backgroundPageConnection.onMessage.addListener(handler),
-        handler => backgroundPageConnection.onMessage.removeListener(handler)).pipe(
+      fromEventPatternWithinAngular(this._zone, backgroundPageConnection.onMessage).pipe(
         map(([message]) => message),
         filter(message => isGraphMessage(message)),
         share()
@@ -220,4 +234,20 @@ export class AppComponent implements OnInit {
 
     return backgroundPageConnection;
   }
+}
+
+function fromEventPatternWithinAngular<T>(zone: NgZone,
+                                          event: { addListener: (callback: (...e: T[]) => void) => void, removeListener: (callback: (...e: T[]) => void) => void }): Observable<any> {
+  return new Observable<T[]>(subscriber => {
+    const handler = (...e: T[]) => zone.run(() => subscriber.next(e));
+
+    try {
+      event.addListener(handler);
+    } catch (err) {
+      subscriber.error(err);
+      return undefined;
+    }
+
+    return () => event.removeListener(handler);
+  });
 }

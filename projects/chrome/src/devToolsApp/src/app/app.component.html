@@ -1,15 +1,19 @@
 <div class="root">
   <div #selector class="selector">
     <button (click)="resetSource.next()">Clear</button>
-    <button (click)="currentGraphsSetSource.next(graphSet.graphs)"
-            *ngFor="let graphSet of graphsById$ | async">{{graphSet.graphs[0].name}} ({{graphSet.graphs.length}})
+    <button
+      (click)="selectGraphSet(graphSet)"
+      *ngFor="let graphSet of graphsById$ | async"
+      [class.active]="((currentGraphsSet$ | async) || [])[0]?.graphId === graphSet.graphId">{{graphSet.graphs[0].name}}
+      ({{graphSet.graphs.length}})
     </button>
   </div>
   <hr [target]="selector" appResizeable/>
   <div #time class="time">
 
     <button (click)="currentGraphSource.next(graph)"
-            *ngFor="let graph of currentGraphsSet$ | async">{{graph.time}}</button>
+            *ngFor="let graph of currentGraphsSet$ | async"
+            [class.active]="(currentGraph$ | async)?.time === graph.time">{{graph.time}}</button>
   </div>
   <hr [target]="time" appResizeable/>
   <ng-container *ngIf="currentGraph$ | async as currentGraph">

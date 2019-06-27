@@ -1,6 +1,5 @@
 import {Observable, throwError} from "rxjs";
 import {StackData} from "./stackData";
-import {catchError, tap} from "rxjs/operators";
 import {TraceObservablePipesConfiguration} from "./traceObservablePipesConfiguration";
 
 export function traceableOperatorFactory<T extends Function>(operator: T, opName: string, config: TraceObservablePipesConfiguration) {
@@ -15,8 +14,8 @@ export function traceableOperatorFactory<T extends Function>(operator: T, opName
 
                 return source.pipe(
                     operator(...args),
-                    tap(val => stack.value = val),
-                    catchError((err) => {
+                    config.origRxJsOperators.tap(val => stack.value = val),
+                    config.origRxJsOperators.catchError((err) => {
                         stack.hasError = true;
                         // if (!(err instanceof ObservablePipeError)) {
                         // console.warn("An error occurred in an observable pipe: \n\n" + getKNode(caught['__stack__']).prettyPrint());
