@@ -65,7 +65,8 @@ export class AppComponent implements OnInit {
 
       this.graphs$ = this.messages$.pipe(
         map((message) => {
-          const {graphId, graph} = message.content;
+          let {graphId, graph} = message.content;
+          graph = new Graph(graph);
 
           console.log("Drawing graph with id " + graphId);
           console.log(message);
@@ -76,7 +77,9 @@ export class AppComponent implements OnInit {
               label: `${x.data.name} (${x.data.value})\n${x.data.call.replace(/^\s*at\s([^(]+\s)?\(?.*\)?\s*$/, "$1")}`,
               title: x.data.call.match(/at\s([^(]+)?\s?/)[1],
               // highlight last node
-              color: (x.data.hasError ? "#ff0000" : (graph.adjacencyList[x.id].length === 0 ? "#b97dff" : undefined))
+              color: (x.data.hasError ?
+                      "#ff0000" :
+                      (graph.adjacencyList[x.id].length === 0 ? "#b97dff" : (graph.ingoing(x).length === 0 ? "#9affd2" : undefined)))
             } as vis.Node)));
           const edges = new vis.DataSet<vis.Edge>(Object.keys(graph.adjacencyList)
             .flatMap(from => graph.adjacencyList[from].map(to => ({from, to}))));
@@ -136,7 +139,7 @@ export class AppComponent implements OnInit {
       edges: {
         arrows: {to: {enabled: true}}
       },
-      physics: false
+
     });
 
     network.on("click", async (event: {

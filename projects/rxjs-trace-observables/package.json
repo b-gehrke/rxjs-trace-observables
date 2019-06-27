@@ -7,7 +7,7 @@
     "build:watch": "cp package.json dist/package.json && webpack --watch"
   },
   "dependencies": {
-    "rxjs": "^6.5.2"
+    "rxjs": "~6.4.0"
   },
   "main": "traceObservablePipes.js",
   "devDependencies": {

@@ -9,7 +9,6 @@
     "watch:extenion-files": "webpack --watch"
   },
   "dependencies": {
-    "graphdracula": "^1.2.1",
     "raphael": "^2.2.8",
     "source-map": "^0.7.3",
     "vis": "^4.21.0"

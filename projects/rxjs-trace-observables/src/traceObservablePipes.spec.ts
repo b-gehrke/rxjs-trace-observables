@@ -1,5 +1,5 @@
 import * as rxjsOperators from "rxjs/operators";
-import {first, map, skip, switchMap, take} from "rxjs/operators";
+import {distinctUntilChanged, first, map, mergeMap, skip, switchMap, take} from "rxjs/operators";
 import * as rxjs from "rxjs";
 import {combineLatest, interval, merge, of} from "rxjs";
 import {traceObservablePipes} from "./traceObservablePipes";
@@ -71,7 +71,7 @@ describe("Main", () => {
         const b$ = of("b").pipe(take(1));
         of("1").pipe(
             map(x => x + "1"),
-            switchMap(x => combineLatest([a$, b$])),
+            switchMap(() => combineLatest([a$, b$])),
 
             trace())
             .subscribe(() => null, error => done(error), () => done());
@@ -83,6 +83,32 @@ describe("Main", () => {
         const b$ = of("b").pipe(take(1));
 
         merge(a$, b$).pipe(
+            take(4),
+            trace()
+        ).subscribe(() => null, done, done);
+    });
+
+    it("should support mergeMap", done => {
+
+        const a$ = of("a").pipe(first());
+        const b$ = of("b").pipe(take(1));
+
+        a$.pipe(
+            switchMap(() => b$.pipe(distinctUntilChanged())),
+            trace("SwitchMap")
+        ).subscribe();
+
+        a$.pipe(
+            mergeMap(() => b$.pipe(distinctUntilChanged())),
+            take(4),
+            take(4),
+            trace("MergeMap")
+        ).subscribe();
+
+        a$.pipe(
+            mergeMap(val => b$.pipe(
+                map(x => x + val)
+            )),
             take(4),
             trace()
         ).subscribe(() => null, done, done);

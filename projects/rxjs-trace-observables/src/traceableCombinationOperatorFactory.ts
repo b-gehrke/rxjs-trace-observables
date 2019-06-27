@@ -1,6 +1,7 @@
 import {Observable} from "rxjs";
 import {StackData} from "./stackData";
 import {TraceObservablePipesConfiguration} from "./traceObservablePipesConfiguration";
+import {graph} from "./global";
 
 export function traceableCombinationOperatorFactory<T extends Function>(operator: T,
                                                                         opName: string,
@@ -12,12 +13,13 @@ export function traceableCombinationOperatorFactory<T extends Function>(operator
         }
         const result = operator(...args);
         const stack = new StackData(opName);
-        result["__stack__"] = [
-            args.filter(x => x["__stack__"]).map(arg => arg["__stack__"]),
-        ];
 
-        if (!config.excludePackages.some(x => stack.call.indexOf(x) >= 0)) {
-            result["__stack__"] = [...result["__stack__"], stack];
+        const ownNode = graph.addNode(stack);
+
+        for (let arg of args) {
+            if (arg["__node__"]) {
+                graph.addEdge(ownNode, arg["__node__"]);
+            }
         }
 
         return result.pipe(config.origRxJsOperators.tap(val => stack.value = val));

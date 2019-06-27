@@ -11,10 +11,13 @@
     "outDir": "dist/ts",
     "declaration": true,
     "declarationDir": "dist",
-    "inlineSourceMap": true
+    "sourceMap": true,
+    "removeComments": false
   },
   "exclude": [
-    "node_modules",
-    "src/**/*.spec.ts"
+    "node_modules"
+  ],
+  "include": [
+    "src/**/*.ts"
   ]
 }

@@ -1,6 +1,6 @@
 import {Component, OnInit} from "@angular/core";
 import {combineLatest, interval, Observable, of} from "rxjs";
-import {delay, first, map, mapTo, skip, switchMap, take, tap} from "rxjs/operators";
+import {concatMap, delay, distinctUntilChanged, first, map, mapTo, mergeMap, scan, skip, switchMap, take, tap} from "rxjs/operators";
 import {trace} from "rxjs-trace-observables";
 import {HttpClient} from "@angular/common/http";
 
@@ -19,12 +19,12 @@ export class AppComponent implements OnInit {
 
   public ngOnInit() {
     const first$ = interval(20).pipe(
-      first(),
+      take(3),
       delay(1)
     );
     const second$ = interval(20).pipe(
       skip(4),
-      take(2),
+      take(5),
     );
 
     this.obs$ = combineLatest(first$, second$)
@@ -76,6 +76,18 @@ export class AppComponent implements OnInit {
       map(x => x + "world"),
       mapTo("Here comes the error"),
       trace("Error")
+    ).subscribe();
+
+    first$.pipe(
+      switchMap(() => second$.pipe(distinctUntilChanged())),
+      trace("SwitchMap")
+    ).subscribe();
+
+    first$.pipe(
+      mergeMap(() => second$.pipe(distinctUntilChanged(),
+        concatMap(() => interval(100).pipe(take(5), scan((p, c) => p + c, 0), map(x => x ** 2))))),
+      mapTo(1),
+      trace("MergeMap")
     ).subscribe();
   }
 }
